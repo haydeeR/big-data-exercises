@@ -48,7 +48,7 @@ public class MovieRecommender {
         long idProduct = 1;
 
         //System.out.println(in.readLine());
-        while ((readed = in.readLine()) != null && j<50) {
+        while ((readed = in.readLine()) != null ) {
             if(readed.isEmpty() == false){
                 if(i == 0 || i == 1 || i == 4)
                 {
@@ -73,13 +73,10 @@ public class MovieRecommender {
         }
         in.close();
         this.totalReviews = --j;
-/*
-
         this.model = new FileDataModel(new File("test.txt"),true,60000L);
         this.similarity = new PearsonCorrelationSimilarity(model);
         this.neighborhood = new ThresholdUserNeighborhood(0.1, similarity, model);
         this.recommender = new GenericUserBasedRecommender(model, neighborhood, similarity);
-        */
 
 
     }
@@ -131,14 +128,7 @@ public class MovieRecommender {
     }
 
     public static void main(String[] args) throws IOException, TasteException {
-
-        String key = "A141HP4LYPWMSR";
-        BigInteger productId = new BigInteger(key.getBytes());
-        System.out.println(productId);
-        System.out.println(new String(productId.toByteArray())); // prints "A141HP4LYPWMSR"
-
         /*
-
         DataModel model = new FileDataModel(new File("data/dataset.csv"));
         UserSimilarity similarity = new PearsonCorrelationSimilarity(model);
         UserNeighborhood neighborhood = new ThresholdUserNeighborhood(0.1, similarity, model);
@@ -163,7 +153,11 @@ public class MovieRecommender {
         }
         List<RecommendedItem> recomendations = this.recommender.recommend(userkey,3);
         for (RecommendedItem recomendation : recomendations) {
-            System.out.println(recomendation);
+            for (Map.Entry<String, Long> entry : this.mapOfUsers.entrySet()) {
+                if (Objects.equals(recomendation.getValue(), entry.getValue())) {
+                    usersRecommendedString.add(entry.getValue().toString());
+                };
+            }
         }
         return usersRecommendedString;
     }
