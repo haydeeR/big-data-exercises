@@ -15,12 +15,6 @@ import org.apache.mahout.cf.taste.recommender.UserBasedRecommender;
 import org.apache.mahout.cf.taste.similarity.UserSimilarity;
 
 import java.io.*;
-import java.math.BigInteger;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.zip.GZIPInputStream;
 
@@ -34,7 +28,7 @@ public class MovieRecommender {
     private long totalReviews = 0;
     private Map<String, Long> mapOfUsers;
     private Map<String, Long> mapOfProducts;
-    private Map<Long, String> arrayValuesOfUsers;
+    private Map<Long, String> arrayValuesOfProducts;
 
     public MovieRecommender(String nameFile) throws IOException, TasteException {
         FileInputStream bais = new FileInputStream(nameFile);
@@ -45,7 +39,7 @@ public class MovieRecommender {
         writer = new PrintWriter(formattedFile);
         this.mapOfProducts = new HashMap<String, Long>();
         this.mapOfUsers = new HashMap<String, Long>();
-        this.arrayValuesOfUsers = new HashMap<Long, String>();
+        this.arrayValuesOfProducts = new HashMap<Long, String>();
 
 
         String readed;
@@ -89,6 +83,7 @@ public class MovieRecommender {
         }else{
             productId = Long.parseLong((this.mapOfProducts.size()+1)+"");
             this.mapOfProducts.put(oneRegister,productId);
+            arrayValuesOfProducts.put(productId,oneRegister);
         }
         return productId;
     }
@@ -100,7 +95,6 @@ public class MovieRecommender {
         }else{
             userId = Long.parseLong((this.mapOfUsers.size()+1)+"");
             this.mapOfUsers.put(oneRegister,userId);
-            arrayValuesOfUsers.put(userId,oneRegister);
         }
         return userId;
     }
@@ -128,9 +122,9 @@ public class MovieRecommender {
         if(this.mapOfUsers.containsKey(userkey))
             userValue = this.mapOfUsers.get(userkey);
         List<RecommendedItem> recomendations = this.recommender.recommend(userValue,3);
-        usersRecommendedString.add(this.arrayValuesOfUsers.get(recomendations.get(0).getItemID()));
-        usersRecommendedString.add(this.arrayValuesOfUsers.get(recomendations.get(1).getItemID()));
-        usersRecommendedString.add(this.arrayValuesOfUsers.get(recomendations.get(2).getItemID()));
+        usersRecommendedString.add(this.arrayValuesOfProducts.get(recomendations.get(0).getItemID()));
+        usersRecommendedString.add(this.arrayValuesOfProducts.get(recomendations.get(1).getItemID()));
+        usersRecommendedString.add(this.arrayValuesOfProducts.get(recomendations.get(2).getItemID()));
 
         return usersRecommendedString;
     }
