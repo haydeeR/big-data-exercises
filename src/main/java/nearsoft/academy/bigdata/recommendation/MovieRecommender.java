@@ -1,5 +1,8 @@
 package nearsoft.academy.bigdata.recommendation;
 
+import com.sun.xml.internal.xsom.impl.scd.Iterators;
+import jdk.nashorn.internal.runtime.events.RecompilationEvent;
+import org.apache.commons.collections.MapUtils;
 import org.apache.mahout.cf.taste.common.TasteException;
 import org.apache.mahout.cf.taste.impl.model.file.FileDataModel;
 import org.apache.mahout.cf.taste.impl.neighborhood.ThresholdUserNeighborhood;
@@ -27,64 +30,62 @@ public class MovieRecommender {
     private UserSimilarity similarity = null;
     private UserNeighborhood neighborhood = null;
     private UserBasedRecommender recommender = null;
+    private Writer writer = null;
     private long totalReviews = 0;
     private Map<String, Long> mapOfUsers;
     private Map<String, Long> mapOfProducts;
+    private Map<Long, String> arrayValuesOfUsers;
 
     public MovieRecommender(String nameFile) throws IOException, TasteException {
         FileInputStream bais = new FileInputStream(nameFile);
         GZIPInputStream gzis = new GZIPInputStream(bais);
         InputStreamReader reader = new InputStreamReader(gzis);
         BufferedReader in = new BufferedReader(reader);
+        OutputStream formattedFile = new FileOutputStream("test.txt");
+        writer = new PrintWriter(formattedFile);
         this.mapOfProducts = new HashMap<String, Long>();
         this.mapOfUsers = new HashMap<String, Long>();
+        this.arrayValuesOfUsers = new HashMap<Long, String>();
 
 
         String readed;
-        String readOneReview = "";
-        BigInteger toWrite;
         long i = 0, j = 0;
-        long idUser = 1;
-        long idProduct = 1;
+        long idUser = 0,idProduct = 0;
+        float score = -1.0f;
 
-        //System.out.println(in.readLine());
         while ((readed = in.readLine()) != null ) {
             if(readed.isEmpty() == false){
-                if(i == 0 || i == 1 || i == 4)
-                {
-                    if(i == 0) {
-                        idProduct = saveOneReviewInMap(getStringToWrite(readed));
-                        writeInFile(idProduct,",");
-                    }
-                    if(i == 1){
-                        idUser = saveUserRevieInMap(getStringToWrite(readed));
-                        writeInFile(idUser,",");
-                    }
-                    if(i == 4){
-                        writeInFile(readed);
-                    }
+                if(readed.contains("/productId:")) {
+                    idProduct = saveOneReviewInMap(getStringToWrite(readed));
+                }else if(readed.contains("/userId:")){
+                    idUser = saveUserRevieInMap(getStringToWrite(readed));
+                }else if(readed.contains("/score:")){
+                    score = Float.parseFloat(getStringToWrite(readed));
                 }
-            }else{
-                writeInFile("\n \n");
+            }else if(idProduct > 0 && idUser > 0 && score >= 0)
+            {
+                writeInFile(idProduct+","+idUser+","+score+"\n");
                 i=-1;
                 j++;
+                idProduct = idUser = -1;
+                score = -1f;
             }
             i++;
         }
+        this.writer.close();
         in.close();
-        this.totalReviews = --j;
+        this.totalReviews = j;
         this.model = new FileDataModel(new File("test.txt"),true,60000L);
         this.similarity = new PearsonCorrelationSimilarity(model);
         this.neighborhood = new ThresholdUserNeighborhood(0.1, similarity, model);
         this.recommender = new GenericUserBasedRecommender(model, neighborhood, similarity);
 
-
     }
 
     public long saveOneReviewInMap(String oneRegister){
-        long idProduct = 0, productId = 0;
+        long productId = -1;
         if(this.mapOfProducts.size() > 0 && this.mapOfProducts.containsKey(oneRegister)){
-            return this.mapOfProducts.get(oneRegister);
+            productId =  this.mapOfProducts.get(oneRegister);
         }else{
             productId = Long.parseLong((this.mapOfProducts.size()+1)+"");
             this.mapOfProducts.put(oneRegister,productId);
@@ -93,72 +94,44 @@ public class MovieRecommender {
     }
 
     public long saveUserRevieInMap(String oneRegister){
-        long userId = 0;
+        long userId = -1;
         if(this.mapOfUsers.size() > 0 && this.mapOfUsers.containsKey(oneRegister)){
-            return this.mapOfUsers.get(oneRegister);
+            userId = this.mapOfUsers.get(oneRegister);
         }else{
             userId = Long.parseLong((this.mapOfUsers.size()+1)+"");
             this.mapOfUsers.put(oneRegister,userId);
+            arrayValuesOfUsers.put(userId,oneRegister);
         }
         return userId;
     }
 
     public void writeInFile(String stringTowrite) throws IOException {
-        BufferedWriter writer = new BufferedWriter(new FileWriter("test.txt", true));
-        stringTowrite = getStringToWrite(stringTowrite);
-        writer.append(stringTowrite);
-        writer.close();
-    }
-
-    public void writeInFile(Long data, String comma) throws IOException {
-        BufferedWriter writer = new BufferedWriter(new FileWriter("test.txt", true));
-        writer.append(data.toString()+comma);
-        writer.close();
+        writer.write(stringTowrite);
     }
 
     public String getStringToWrite(String stringToWrite){
         String[] arrayOfStrings = stringToWrite.split(" ");
-        String data = arrayOfStrings[1];
+        String data = "0";
+        if(arrayOfStrings.length > 1 )
+            data = arrayOfStrings[1];
         return data;
     }
 
-    public String[] getItemsOfStringToWrite(String stringToWrite){
-        String[] arrayOfStrings = stringToWrite.split(" ");
-        return arrayOfStrings;
-    }
-
     public static void main(String[] args) throws IOException, TasteException {
-        /*
-        DataModel model = new FileDataModel(new File("data/dataset.csv"));
-        UserSimilarity similarity = new PearsonCorrelationSimilarity(model);
-        UserNeighborhood neighborhood = new ThresholdUserNeighborhood(0.1, similarity, model);
-        UserBasedRecommender recommender = new GenericUserBasedRecommender(model, neighborhood, similarity);
-
-        List<RecommendedItem> recommendations = recommender.recommend(2 , 5);
-        for (RecommendedItem recommendation : recommendations) {
-            System.out.println(recommendation);
-        }
-        */
 
     }
 
-    public List<String> getRecommendationsForUser(String idUser) throws TasteException {
-        long userkey = 0;
+    public List<String> getRecommendationsForUser(String userkey) throws TasteException {
+        long userValue = 0;
         List<String> usersRecommendedString = new ArrayList<String>();
-        for (Map.Entry<String, Long> entry : this.mapOfUsers.entrySet()) {
-            if (Objects.equals(idUser, entry.getKey())) {
-                userkey = entry.getValue();
-                break;
-            };
-        }
-        List<RecommendedItem> recomendations = this.recommender.recommend(userkey,3);
-        for (RecommendedItem recomendation : recomendations) {
-            for (Map.Entry<String, Long> entry : this.mapOfUsers.entrySet()) {
-                if (Objects.equals(recomendation.getValue(), entry.getValue())) {
-                    usersRecommendedString.add(entry.getValue().toString());
-                };
-            }
-        }
+
+        if(this.mapOfUsers.containsKey(userkey))
+            userValue = this.mapOfUsers.get(userkey);
+        List<RecommendedItem> recomendations = this.recommender.recommend(userValue,3);
+        usersRecommendedString.add(this.arrayValuesOfUsers.get(recomendations.get(0).getItemID()));
+        usersRecommendedString.add(this.arrayValuesOfUsers.get(recomendations.get(1).getItemID()));
+        usersRecommendedString.add(this.arrayValuesOfUsers.get(recomendations.get(2).getItemID()));
+
         return usersRecommendedString;
     }
 
